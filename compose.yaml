@@ -1,0 +1,35 @@
+services:
+  # 服務一：MSSQL 資料庫
+  mssql-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: mssql-db
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=1qaz@WSX
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/1433'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - mssql_data:/var/opt/mssql  # 修正：加上掛載路徑，資料庫重啟時資料才不會遺失
+
+  # 服務二：Java Spring Boot 應用程式
+  app:
+    build: .
+    container_name: staff-manage-app
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:sqlserver://mssql-db:1433;databaseName=master;trustServerCertificate=true
+      - SPRING_DATASOURCE_USERNAME=sa        # 新增：強制覆蓋 Java 內部帳號
+      - SPRING_DATASOURCE_PASSWORD=1qaz@WSX  # 新增：強制覆蓋 Java 內部密碼
+    depends_on:
+      mssql-db:
+        condition: service_healthy
+
+volumes:
+  mssql_data:
