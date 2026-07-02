@@ -5,19 +5,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.extern.slf4j.Slf4j;
 
-import com.sm.leave.dto.request.LeaveApplyRequest;
-import com.sm.leave.dto.response.LeaveApplyResponse;
+import com.sm.leave.dto.request.*;
+import com.sm.leave.dto.response.*;
 import com.sm.leave.repository.EmployeeRepository;
 import com.sm.leave.repository.LeaveRequestRepository;
 import com.sm.leave.service.LeaveRequestService;
 import com.sm.leave.exception.LeaveException;
+import com.sm.leave.entity.ApprovalHistory;
 import com.sm.leave.entity.Employee;
 import com.sm.leave.entity.LeaveType;
 import com.sm.leave.entity.LeaveRequest;
 import com.sm.leave.repository.LeaveTypeRepository;
+import com.sm.leave.repository.ApprovalHistoryRepository;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.*;
 import java.util.*;
 import java.time.temporal.ChronoUnit;
 
@@ -25,27 +27,30 @@ import java.time.temporal.ChronoUnit;
 @Service
 @Transactional(readOnly = true)
 public class LeaveRequestServiceImpl implements LeaveRequestService {
-	
-	private final EmployeeRepository employeeRepository;
-	private final LeaveRequestRepository leaveRequestRepository;
-	private final LeaveTypeRepository leaveTypeRepository;
-	
-	public LeaveRequestServiceImpl(EmployeeRepository employeeRepository,
-	                               LeaveRequestRepository leaveRequestRepository,
-	                               LeaveTypeRepository leaveTypeRepository) {
-		this.employeeRepository = employeeRepository;
-		this.leaveRequestRepository = leaveRequestRepository;
-		this.leaveTypeRepository = leaveTypeRepository;
-	}
 
-	/**
-	 * 申請假單
-	 */
-	@Override
+    private final EmployeeRepository employeeRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
+    private final LeaveTypeRepository leaveTypeRepository;
+    private final ApprovalHistoryRepository approvalHistoryRepository;
+
+    public LeaveRequestServiceImpl(EmployeeRepository employeeRepository,
+                                   LeaveRequestRepository leaveRequestRepository,
+                                   LeaveTypeRepository leaveTypeRepository,
+                                   ApprovalHistoryRepository approvalHistoryRepository) {
+        this.employeeRepository = employeeRepository;
+        this.leaveRequestRepository = leaveRequestRepository;
+        this.leaveTypeRepository = leaveTypeRepository;
+        this.approvalHistoryRepository = approvalHistoryRepository;
+    }
+
+    /**
+     * 申請假單
+     */
+    @Override
     @Transactional
-	public LeaveApplyResponse applyLeave(LeaveApplyRequest request) {
-		 
-		// 1. 驗證員工是否存在 
+    public LeaveApplyResponse applyLeave(LeaveApplyRequest request) {
+
+        // 1. 驗證員工是否存在
         Employee employee = employeeRepository.findByEmployeeNo(request.getEmployeeNo())
                 .orElseThrow(() -> new LeaveException("找不到工號為 " + request.getEmployeeNo() + " 的員工"));
 
@@ -90,7 +95,6 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
                 .endDate(endDate)
                 .totalDays(totalDays)
                 .reason(request.getReason())
-                .appliedAt(request.getAppliedAt())
                 .status("PENDING") // 雖然 PrePersist 有寫，但這裡明確指定更清晰
                 .build();
 
@@ -99,31 +103,105 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
 
         // 9. 建立通知、通知主管
         sendNotificationToManager(employee, savedRequest);
-        
+
         LeaveApplyResponse response = new LeaveApplyResponse(startDate,
-        													 endDate,
-        													 totalDays,
-        													 request.getReason(),
-        													 "PENDING",
-        													 request.getAppliedAt()        							
-        		);
+                endDate,
+                totalDays,
+                request.getReason(),
+                "PENDING",
+                LocalDateTime.now()
+        );
         return response;
-		  
-	 }
-	
-//	/**
-//	 * 請假審核
-//	 */
-//	@Override
-//    @Transactional
-//	public void approveLeave() {
-//		
-//	}
-	
-	
-	
-	private void sendNotificationToManager(Employee employee, LeaveRequest request) {
+
+    }
+
+    /**
+     * 請假審核
+     */
+    @Override
+    @Transactional
+    public LeaveApprovalResponse approveLeave(LeaveApprovalRequest LeaveApprovalRequest, Long managerId) {
+        // 1. 驗證審核人（主管）是否存在
+        Employee manager = employeeRepository.findById(managerId)
+                .orElseThrow(() -> new LeaveException("找不到該審核人員"));
+
+        // 2. 驗證是否為主管（這裡假設 Employee 有個 getRole() 或類似的屬性）
+        if (!"MANAGER".equalsIgnoreCase(manager.getRole().getCode())) {
+            throw new LeaveException("權限不足：只有主管階級可以審核假單");
+        }
+
+        // 3. 撈取假單
+        LeaveRequest leaveRequest = leaveRequestRepository.findById(LeaveApprovalRequest.getLeaveRequestId())
+                .orElseThrow(() -> new LeaveException("找不到該筆請假申請"));
+
+        // 4. 驗證安全性：這個主管是否有權限審核這名員工？ (進階商務邏輯，可依需求加入)
+        // if (!leaveRequest.getEmployee().getManager().getId().equals(managerId)) {
+        //     throw new LeaveException("您不是該員工的直屬主管，無法審核此假單");
+        // }
+
+        // 5. 驗證是否能審核：只有 PENDING 狀態才能審核
+        if (!"PENDING".equalsIgnoreCase(leaveRequest.getStatus())) {
+            throw new LeaveException("該假單已被處理過，目前的狀態為: " + leaveRequest.getStatus());
+        }
+
+        // 6. 更新假單狀態與審核資訊
+        Boolean approved = LeaveApprovalRequest.getApproved();
+        if (approved == null) {
+            throw new LeaveException("審核結果不能為空");
+        }
+
+        String action = approved ? "APPROVED" : "REJECTED";
+        if (!approved && (LeaveApprovalRequest.getComment() == null || LeaveApprovalRequest.getComment().isBlank())) {
+            throw new LeaveException("駁回必須填寫原因");
+        }
+
+        if (!approved) {
+            leaveRequest.setRejectReason(LeaveApprovalRequest.getComment());
+        }
+        leaveRequest.setStatus(action);
+        leaveRequest.setApprovedBy(manager);
+        leaveRequest.setApprovedAt(LocalDateTime.now());
+        // 因為有 @Transactional，JPA 在方法結束時會自動 flush (Dirty Checking)，不一定要手動 save
+        LeaveRequest updatedRequest = leaveRequestRepository.save(leaveRequest);
+
+        String comment = LeaveApprovalRequest.getComment() != null ? LeaveApprovalRequest.getComment() : "主管同意";
+
+        // 7. 紀錄審核歷程 (因為 LeaveRequest 內部 有 List<ApprovalHistory>，我們直接建立並連動)
+        ApprovalHistory history = ApprovalHistory.builder()
+                .leaveRequest(updatedRequest)
+                .approver(manager)
+                .action("APPROVED")
+                .comment(comment)
+                .actionTime(LocalDateTime.now())
+                .build();
+
+        approvalHistoryRepository.save(history);
+
+        // 8. 發送通知給員工
+        sendNotificationToEmployee(updatedRequest.getEmployee(), updatedRequest);
+
+        LeaveApprovalResponse response = LeaveApprovalResponse.builder()
+                .leaveRequestId(updatedRequest.getId())
+                .status("APPROVED")
+                .approvedAt(LocalDateTime.now())
+                .approvedByName(manager.getName())
+                .approvedById(managerId)
+                .comment(comment)
+                .build();
+
+        return response;
+
+    }
+
+
+    private void sendNotificationToManager(Employee employee, LeaveRequest request) {
         // 實作你的通知邏輯，例如發送 Email 或系統推播
         log.info("已發送請假通知給員工 {} 的直屬主管。假單ID: {}", employee.getName(), request.getId());
     }
+
+    private void sendNotificationToEmployee(Employee employee, LeaveRequest request) {
+        // 實作你的通知邏輯，例如發送 Email 或系統推播
+        log.info("已發送審核結果通知給員工 {}。假單ID: {}", employee.getName(), request.getId());
+    }
+
 }

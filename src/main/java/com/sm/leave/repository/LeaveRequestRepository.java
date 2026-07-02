@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Repository
-public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Integer> {
+public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long> {
 	
 	List<LeaveRequest> findByEmployeeId(Long employeeId);
 	boolean existsByEmployeeAndStatusInAndStartDateLessThanEqualAndEndDateGreaterThanEqual(

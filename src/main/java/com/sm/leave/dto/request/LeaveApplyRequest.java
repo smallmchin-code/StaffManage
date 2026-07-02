@@ -21,12 +21,7 @@ public class LeaveApplyRequest {
 
 	@NotNull(message = "請假原因不能為空")
     private String reason;
-	
-	private LocalDateTime appliedAt;
-	
-	public LocalDateTime getAppliedAt() {
-		return this.appliedAt;
-	}
+
 	public String getEmployeeNo() {
 		return this.employeeNo;
 	}
