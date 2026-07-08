@@ -3,6 +3,7 @@ package com.sm.leave.repository;
 import com.sm.leave.entity.AttendanceRecord;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,4 +16,8 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
     
  // ✨ 下班打卡用的查詢：回傳 Optional，找不到就噴錯誤
     Optional<AttendanceRecord> findByEmployeeIdAndCheckInTimeBetween(Long employeeId, LocalDateTime start, LocalDateTime end);
+
+    List<AttendanceRecord> findByEmployeeIdAndCheckInTimeBetweenOrderByCheckInTimeAsc(
+            Long employeeId, LocalDateTime start, LocalDateTime end
+    );
 }

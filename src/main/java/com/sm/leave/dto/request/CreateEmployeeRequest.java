@@ -5,19 +5,15 @@ import lombok.*;
 
 import java.time.LocalDate;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Getter
-public class CreateEmployeeRequest {
-    private String name;
+public record CreateEmployeeRequest(String name,
 
-    private Role role;
+                                    Long roleId,
 
-    private String email;
+                                    String email,
 
-    private String password;
+                                    String password,
 
-    private LocalDate hireDate;
+                                    LocalDate hireDate) {
+
 
 }

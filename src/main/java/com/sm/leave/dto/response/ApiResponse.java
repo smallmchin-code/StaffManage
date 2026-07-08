@@ -9,9 +9,6 @@ import java.time.LocalDateTime;
  * 所有 REST API 的標準回應結構
  *
  * @param <T> 回應資料的泛型類型
- * @author Allen.Wang
- * @version 1.0.0
- * @since 2025-08-08
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiResponse<T>(

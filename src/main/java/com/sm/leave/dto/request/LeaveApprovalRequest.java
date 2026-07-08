@@ -2,32 +2,11 @@ package com.sm.leave.dto.request;
 
 import jakarta.validation.constraints.NotNull;
 
-public class LeaveApprovalRequest {
+public record LeaveApprovalRequest(Long leaveRequestId,
 
-    @NotNull(message = "假單編號不能為空")
-    private Long leaveRequestId;
+                                   Boolean approved,
 
-    @NotNull(message = "審核編號不能為空")
-    private String approverNo;
+                                   String comment) {
 
-    private Boolean approved;
-
-    private String comment;
-
-    public Long getLeaveRequestId() {
-        return leaveRequestId;
-    }
-
-    public String getApproverNo() {
-        return approverNo;
-    }
-
-    public Boolean getApproved() {
-        return approved;
-    }
-
-    public String getComment() {
-        return comment;
-    }
 
 }

@@ -2,8 +2,10 @@ package com.sm.leave.service.impl;
 
 import com.sm.leave.dto.request.CreateEmployeeRequest;
 import com.sm.leave.dto.response.CreateEmployeeResponse;
+import com.sm.leave.entity.Role;
 import com.sm.leave.exception.LeaveException;
 import com.sm.leave.repository.EmployeeRepository;
+import com.sm.leave.repository.RoleRepository;
 import com.sm.leave.service.EmployeeService;
 import com.sm.leave.entity.Employee;
 import lombok.extern.slf4j.Slf4j;
@@ -17,35 +19,44 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder; // 注入 Spring Security 的加密器
 
     public EmployeeServiceImpl(EmployeeRepository employeeRepository,
+                               RoleRepository roleRepository,
                                PasswordEncoder passwordEncoder) {
         this.employeeRepository = employeeRepository;
+        this.roleRepository =  roleRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
     public CreateEmployeeResponse createEmployee(CreateEmployeeRequest request) {
         // 1. 驗證 Email 是否重複
-        if (employeeRepository.existsByEmail(request.getEmail())) {
+        if (employeeRepository.existsByEmail(request.email())) {
             throw new LeaveException("該 Email 已經被註冊過");
         }
+
+        Role role = roleRepository.findById(request.roleId())
+                .orElseThrow(() ->
+                        new LeaveException("角色不存在"));
 
         // 2. 執行緒安全的自動生成員工編號 (EMP00001, EMP00002...)
         String nextEmployeeNo = generateNextEmployeeNo();
 
         // 3. 密碼加密
-        String encodedPassword = passwordEncoder.encode(request.getPassword());
+        String encodedPassword = passwordEncoder.encode(request.password());
+
+
 
         // 4. 建立員工 Entity (設定預設狀態與角色)
         Employee employee = Employee.builder()
                 .employeeNo(nextEmployeeNo)
-                .name(request.getName())
-                .email(request.getEmail())
+                .name(request.name())
+                .email(request.email())
                 .password(encodedPassword)
                 .status("ACTIVE")       // 預設為在職
-                .role( request.getRole()) // 預設角色
+                .role(role) // 預設角色
                 .build();
 
         // 5. 存進 DB
@@ -60,7 +71,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .name(savedEmployee.getName())
                 .email(savedEmployee.getEmail())
                 .status(savedEmployee.getStatus())
-                .role(savedEmployee.getRole())
+                .roleCode(savedEmployee.getRole().getCode())
                 .message("員工帳號建立成功")
                 .build();
     }
@@ -82,5 +93,6 @@ public class EmployeeServiceImpl implements EmployeeService {
                 })
                 .orElse("EMP00001"); // 如果資料庫完全沒資料，就從 EMP00001 開始
     }
+
 
 }

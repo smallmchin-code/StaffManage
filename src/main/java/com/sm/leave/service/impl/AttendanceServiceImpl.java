@@ -1,12 +1,11 @@
 package com.sm.leave.service.impl;
 
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.math.RoundingMode;
 import java.math.BigDecimal;
+import java.util.List;
 
+import com.sm.leave.dto.response.AttendanceHistoryResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -152,6 +151,41 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .checkOutTime(savedAttendance.getCheckOutTime())
                 .workHours(savedAttendance.getWorkHours())
                 .message(String.format("下班打卡成功！您今日總工時為 %s 小時。辛苦了！", workHours))
+                .build();
+    }
+
+    @Transactional(readOnly = true) // 唯讀查詢優化
+    public List<AttendanceHistoryResponse> getMyAttendance(Long employeeId, YearMonth month) {
+
+        // 1. 驗證員工是否存在
+         employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new LeaveException("找不到該員工，無法查詢出勤紀錄"));
+
+        // 2. 計算該 YearMonth 的當月起迄時間區間
+        LocalDate firstDayOfMonth = month.atDay(1); // 2026-07-01
+        LocalDate lastDayOfMonth = month.atEndOfMonth(); // 2026-07-31
+
+        LocalDateTime startDateTime = firstDayOfMonth.atStartOfDay(); // 2026-07-01 00:00:00
+        LocalDateTime endDateTime = lastDayOfMonth.atTime(LocalTime.MAX); // 2026-07-31 23:59:59.999...
+
+        // 3. 查詢該員工在該時間區間內的出勤紀錄 (依時間正序排列，方便前端拉成月曆或表格)
+        List<AttendanceRecord> attendances = attendanceRecordRepository
+                .findByEmployeeIdAndCheckInTimeBetweenOrderByCheckInTimeAsc(employeeId, startDateTime, endDateTime);
+
+        // 4. 將 Entity 轉換為 DTO 列表
+        return attendances.stream()
+                .map(this::convertToHistoryDto)
+                .toList();
+    }
+
+    private AttendanceHistoryResponse convertToHistoryDto(AttendanceRecord attendance) {
+        return AttendanceHistoryResponse.builder()
+                .attendanceId(attendance.getId())
+                .workDate(attendance.getWorkDate()) // 2026-07-07
+                .checkInTime(attendance.getCheckInTime())
+                .checkOutTime(attendance.getCheckOutTime()) // 下班可能為 null (表示尚未下班打卡)
+                .workHours(attendance.getWorkHours())       // 尚未下班時為 null
+                .status(attendance.getStatus())             // NORMAL / LATE
                 .build();
     }
 

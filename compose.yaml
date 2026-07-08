@@ -24,9 +24,9 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:sqlserver://mssql-db:1433;databaseName=master;trustServerCertificate=true
+      - SPRING_DATASOURCE_URL=  JDBC:sqlserver://mssql-db:1433;databaseName=master;trustServerCertificate=true
       - SPRING_DATASOURCE_USERNAME=sa        # 新增：強制覆蓋 Java 內部帳號
-      - SPRING_DATASOURCE_PASSWORD=1qaz@WSX  # 新增：強制覆蓋 Java 內部密碼
+      - SPRING_DATASOURCE_PASSWORD=1qaz@WSX  # 新增：強制覆蓋 Java 內密碼
     depends_on:
       mssql-db:
         condition: service_healthy
