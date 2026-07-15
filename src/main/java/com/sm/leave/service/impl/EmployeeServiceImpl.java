@@ -8,7 +8,9 @@ import com.sm.leave.repository.EmployeeRepository;
 import com.sm.leave.repository.RoleRepository;
 import com.sm.leave.service.EmployeeService;
 import com.sm.leave.entity.Employee;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -77,22 +79,28 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     /**
-     * 生成下一個員工編號的私有方法
+     * 透過 DB 悲觀鎖產生下一個員工編號。
+     *
+     * 流程：
+     *   1. SELECT employeeNo FROM employees ORDER BY employeeNo DESC LIMIT 1 FOR UPDATE
+     *   2. 解析數字部分 + 1，重新格式化
+     *   3. 若 DB 無任何員工，從 EMP00001 開始
+     *
+     * 為何不用 synchronized：
+     *   synchronized 只鎖 JVM，多台 server 或連線池多 thread 仍有衝突風險。
+     *   FOR UPDATE 在 DB 層保證序列化，Transaction commit 後鎖才釋放。
      */
-    private synchronized String generateNextEmployeeNo() {
-        // 從資料庫撈出目前最大的員工編號 (例如 "EMP00002")
-        // 這裡加上 synchronized 可以防止單一伺服器內部的同時點擊衝突
-        return employeeRepository.findMaxEmployeeNo()
+    private String generateNextEmployeeNo() {
+        return employeeRepository.findMaxEmployeeNoForUpdate()
                 .map(maxNo -> {
-                    // 拔掉 "EMP"，剩下 "00002"
+                    // maxNo 格式固定為 "EMP00002"，取 index 3 之後的數字字串
                     String numberStr = maxNo.substring(3);
-                    // 轉成數字 + 1 -> 3
                     int nextNumber = Integer.parseInt(numberStr) + 1;
-                    // 重新格式化回 EMP00003
                     return String.format("EMP%05d", nextNumber);
                 })
-                .orElse("EMP00001"); // 如果資料庫完全沒資料，就從 EMP00001 開始
-    }
+                .orElse("EMP00001");
+    }// 如果資料庫完全沒資料，就從 EMP00001 開始
+
 
 
 }

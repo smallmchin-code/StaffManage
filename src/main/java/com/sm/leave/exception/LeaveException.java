@@ -1,12 +1,17 @@
 package com.sm.leave.exception;
 
+import lombok.Getter;
+import lombok.Setter;
+
+import java.io.Serial;
+
+@Setter
+@Getter
 public class LeaveException extends RuntimeException {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 錯誤代碼
-     */
     private String errorCode;
 
     /**
@@ -64,24 +69,6 @@ public class LeaveException extends RuntimeException {
      */
     public LeaveException(String message, String errorCode, Throwable cause) {
         super(message, cause);
-        this.errorCode = errorCode;
-    }
-
-    /**
-     * 取得錯誤代碼
-     * 
-     * @return 錯誤代碼
-     */
-    public String getErrorCode() {
-        return errorCode;
-    }
-
-    /**
-     * 設定錯誤代碼
-     * 
-     * @param errorCode 錯誤代碼
-     */
-    public void setErrorCode(String errorCode) {
         this.errorCode = errorCode;
     }
 

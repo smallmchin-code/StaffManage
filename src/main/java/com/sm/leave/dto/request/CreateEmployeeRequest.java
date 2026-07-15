@@ -1,19 +1,20 @@
 package com.sm.leave.dto.request;
 
 import com.sm.leave.entity.Role;
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 import java.time.LocalDate;
 
-public record CreateEmployeeRequest(String name,
+public record CreateEmployeeRequest(@NotBlank(message = "名字不能為空") String name,
 
-                                    Long roleId,
+                                    @NonNull Long roleId,
 
-                                    String email,
+                                    @NotBlank(message = "信箱不能為空") String email,
 
-                                    String password,
+                                    @NotBlank(message = "密碼不能為空") String password,
 
-                                    LocalDate hireDate) {
+                                    @NotBlank(message = "入職時間不能為空") LocalDate hireDate) {
 
 
 }
