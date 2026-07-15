@@ -1,6 +1,5 @@
 package com.sm.leave.dto.request;
 
-import com.sm.leave.entity.Role;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 

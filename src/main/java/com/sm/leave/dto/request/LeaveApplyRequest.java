@@ -1,8 +1,6 @@
 package com.sm.leave.dto.request;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-
 import jakarta.validation.constraints.NotBlank;
 
 public record LeaveApplyRequest(

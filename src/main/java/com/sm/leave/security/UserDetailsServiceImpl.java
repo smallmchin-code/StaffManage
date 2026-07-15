@@ -24,10 +24,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     /**
      * Spring Security 登入流程會自動呼叫這個 method。
      * username 在這個專案對應的是 Employee 的 email。
-     *
      * 回傳的 UserDetails 包含：
      *   - email（作為 username）
-     *   - BCrypt 密碼（Spring Security 會自行比對，不需要我們手動比）
+     *   - Bcrypt 密碼（Spring Security 會自行比對，不需要我們手動比）
      *   - 角色（格式必須是 "ROLE_" 前綴，例如 ROLE_ADMIN）
      *   - 帳號是否啟用（對應 employee.status）
      */

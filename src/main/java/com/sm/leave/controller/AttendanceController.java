@@ -55,7 +55,6 @@ public class AttendanceController {
     /**
      * 查詢自己的當月出勤紀錄
      * 所有登入角色皆可使用，只看得到自己的
-     *
      * 呼叫範例：GET /api/attendance/my-history?month=2026-07
      * month 不傳時預設為當月
      */

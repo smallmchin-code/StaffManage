@@ -80,12 +80,10 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     /**
      * 透過 DB 悲觀鎖產生下一個員工編號。
-     *
      * 流程：
      *   1. SELECT employeeNo FROM employees ORDER BY employeeNo DESC LIMIT 1 FOR UPDATE
      *   2. 解析數字部分 + 1，重新格式化
      *   3. 若 DB 無任何員工，從 EMP00001 開始
-     *
      * 為何不用 synchronized：
      *   synchronized 只鎖 JVM，多台 server 或連線池多 thread 仍有衝突風險。
      *   FOR UPDATE 在 DB 層保證序列化，Transaction commit 後鎖才釋放。
