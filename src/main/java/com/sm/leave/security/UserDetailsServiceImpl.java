@@ -38,19 +38,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         Employee employee = employeeRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("找不到此 Email 的使用者：" + email));
 
-        // Spring Security 的角色慣例：必須加上 "ROLE_" 前綴
-        // ADMIN → ROLE_ADMIN, MANAGER → ROLE_MANAGER, EMPLOYEE → ROLE_EMPLOYEE
-        String roleCode = employee.getRole().getCode(); // "ADMIN" / "MANAGER" / "EMPLOYEE"
-        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + roleCode);
-
-        return User.builder()
-                .username(employee.getEmail())
-                .password(employee.getPassword())           // 已是 Bcrypt，Spring 會自動比對
-                .authorities(List.of(authority))
-                .accountExpired(false)
-                .accountLocked(false)
-                .credentialsExpired(false)
-                .disabled("INACTIVE".equalsIgnoreCase(employee.getStatus())) // 離職員工登不進來
-                .build();
+        // 使用自訂的 CustomUserDetails 進行包裝
+        return new CustomUserDetails(employee);
     }
 }

@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface LeaveRequestService {
 
-    LeaveApplyResponse applyLeave(LeaveApplyRequest request);
+    LeaveApplyResponse applyLeave(LeaveApplyRequest request, String employeeNo);
 
     LeaveApprovalResponse approveLeave(LeaveApprovalRequest leaveApprovalRequest, Long managerId);
 

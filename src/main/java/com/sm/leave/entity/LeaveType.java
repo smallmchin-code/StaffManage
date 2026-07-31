@@ -21,6 +21,7 @@ public class LeaveType {
      *  PERSONAL 事假
      *  MARRIAGE 婚假
      *  FUNERAL  喪假
+     *  OFFICIAL 公假
      */
     @Column(nullable = false, unique = true, length = 50)
     private String code;

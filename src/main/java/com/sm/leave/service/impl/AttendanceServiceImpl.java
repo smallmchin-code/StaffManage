@@ -60,7 +60,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
         // 3. 檢查今天是否已打卡 (查詢當天 00:00 ~ 23:59 是否已有紀錄)
         LocalDateTime startOfDay = today.atStartOfDay();
-        LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
+        LocalDateTime endOfDay   = today.atTime(LocalTime.MAX);
 
         boolean hasCheckedIn = attendanceRecordRepository.existsByEmployeeIdAndCheckInTimeBetween(employeeId,
                 startOfDay, endOfDay);
@@ -161,7 +161,7 @@ public class AttendanceServiceImpl implements AttendanceService {
          employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new LeaveException("找不到該員工，無法查詢出勤紀錄"));
 
-        // 2. 計算該 YearMonth 的當月起迄時間區間
+        // 2. 計算該 YearMonth 的當月起讫時間區間
         LocalDate firstDayOfMonth = month.atDay(1); // 2026-07-01
         LocalDate lastDayOfMonth = month.atEndOfMonth(); // 2026-07-31
 

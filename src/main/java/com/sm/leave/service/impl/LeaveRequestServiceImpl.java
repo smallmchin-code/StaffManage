@@ -28,19 +28,19 @@ import java.time.temporal.ChronoUnit;
 @Transactional(readOnly = true)
 public class LeaveRequestServiceImpl implements LeaveRequestService {
 
-    private final EmployeeRepository employeeRepository;
-    private final LeaveRequestRepository leaveRequestRepository;
-    private final LeaveTypeRepository leaveTypeRepository;
+    private final EmployeeRepository        employeeRepository;
+    private final LeaveRequestRepository    leaveRequestRepository;
+    private final LeaveTypeRepository       leaveTypeRepository;
     private final ApprovalHistoryRepository approvalHistoryRepository;
 
     public LeaveRequestServiceImpl(EmployeeRepository employeeRepository,
                                    LeaveRequestRepository leaveRequestRepository,
                                    LeaveTypeRepository leaveTypeRepository,
                                    ApprovalHistoryRepository approvalHistoryRepository) {
-        this.employeeRepository = employeeRepository;
-        this.leaveRequestRepository = leaveRequestRepository;
-        this.leaveTypeRepository = leaveTypeRepository;
-        this.approvalHistoryRepository = approvalHistoryRepository;
+        this.employeeRepository         = employeeRepository;
+        this.leaveRequestRepository     = leaveRequestRepository;
+        this.leaveTypeRepository        = leaveTypeRepository;
+        this.approvalHistoryRepository  = approvalHistoryRepository;
     }
 
     /**
@@ -48,10 +48,10 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
      */
     @Override
     @Transactional
-    public LeaveApplyResponse applyLeave(LeaveApplyRequest request) {
+    public LeaveApplyResponse applyLeave(LeaveApplyRequest request, String employeeNo) {
 
         // 1. 驗證員工是否存在
-        Employee employee = findByEmployeeNo(request.employeeNo());
+        Employee employee = findByEmployeeNo(employeeNo);
 
         // 2. 檢查離職員工不能請假
         if ("INACTIVE".equalsIgnoreCase(employee.getStatus())) {
@@ -133,9 +133,9 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
                 .orElseThrow(() -> new LeaveException("找不到該筆請假申請"));
 
         // 4. 驗證安全性：這個主管是否有權限審核這名員工？ (進階商務邏輯，可依需求加入)
-        // if (!leaveRequest.getEmployee().getManager().getId().equals(managerId)) {
-        //     throw new LeaveException("您不是該員工的直屬主管，無法審核此假單");
-        // }
+         if (!leaveRequest.getEmployee().getManager().equals(manager)) {
+             throw new LeaveException("您不是該員工的直屬主管，無法審核此假單");
+         }
 
         // 5. 驗證是否能審核：只有 PENDING 狀態才能審核
         if (!"PENDING".equalsIgnoreCase(leaveRequest.getStatus())) {
@@ -282,6 +282,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
 
 
     //  service 內部私有方法
+
     /**
      * 封裝 Entity 轉 DTO 的私有工具方法
      */

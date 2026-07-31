@@ -29,4 +29,6 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
 			"AND lr.status = 'PENDING' " +       // 只抓待審核
 			"ORDER BY lr.id DESC")               // 最新申請的排最上面
 	List<LeaveRequest> findPendingLeavesByManagerId(@Param("managerId") Long managerId);
+
+	List<LeaveRequest> findByEmployeeIdAndStatus(Long employeeId, String status);
 }

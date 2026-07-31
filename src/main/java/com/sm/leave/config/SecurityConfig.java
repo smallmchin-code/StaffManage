@@ -67,7 +67,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         // ── ADMIN 或 MANAGER 可以進來（例如審核假單）──
-                        .requestMatchers("/api/manager/**").hasAnyRole("ADMIN", "MANAGER")
+                        .requestMatchers("/api/leave/pending", "/api/leave/approval").hasAnyRole("ADMIN", "MANAGER")
 
                         // ── 所有登入過的人都可以（ADMIN、MANAGER、EMPLOYEE 三種角色）──
                         // hasAnyRole("ADMIN","MANAGER","EMPLOYEE") 等同於 authenticated()，

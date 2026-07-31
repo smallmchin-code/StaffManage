@@ -4,14 +4,13 @@ import com.sm.leave.dto.response.ApiResponse;
 import com.sm.leave.dto.response.AttendanceHistoryResponse;
 import com.sm.leave.dto.response.AttendanceResponse;
 import com.sm.leave.entity.Employee;
-import com.sm.leave.exception.LeaveException;
-import com.sm.leave.repository.EmployeeRepository;
 import com.sm.leave.service.AttendanceService;
+import com.sm.leave.util.SecurityUtils;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.YearMonth;
@@ -23,7 +22,7 @@ import java.util.List;
 public class AttendanceController {
 
     private final AttendanceService   attendanceService;
-    private final EmployeeRepository  employeeRepository;
+    private final SecurityUtils       securityUtils;
 
     /**
      * 上班打卡
@@ -32,10 +31,9 @@ public class AttendanceController {
      */
     @PostMapping("/clock-in")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<AttendanceResponse>> clockIn(
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<ApiResponse<AttendanceResponse>> clockIn() {
 
-        Employee employee = getEmployeeFromSession(userDetails);
+        Employee employee = securityUtils.getCurrentEmployee();
         return ResponseEntity.ok(ApiResponse.success(attendanceService.clockIn(employee.getId())));
     }
 
@@ -45,10 +43,9 @@ public class AttendanceController {
      */
     @PostMapping("/clock-out")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<AttendanceResponse>> clockOut(
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<ApiResponse<AttendanceResponse>> clockOut() {
 
-        Employee employee = getEmployeeFromSession(userDetails);
+        Employee employee = securityUtils.getCurrentEmployee();
         return ResponseEntity.ok(ApiResponse.success(attendanceService.clockOut(employee.getId())));
     }
 
@@ -61,10 +58,9 @@ public class AttendanceController {
     @GetMapping("/my-history")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<AttendanceHistoryResponse>>> getMyAttendance(
-            @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(required = false) String month) {
 
-        Employee employee = getEmployeeFromSession(userDetails);
+        Employee employee = securityUtils.getCurrentEmployee();
 
         // month 參數若前端沒傳，預設查當月
         YearMonth yearMonth = (month != null) ? YearMonth.parse(month) : YearMonth.now();
@@ -73,11 +69,5 @@ public class AttendanceController {
                 attendanceService.getMyAttendance(employee.getId(), yearMonth)));
     }
 
-    // ─────────────────────────────────────────────
-    // 私有工具方法：從 Session 取出當前登入的 Employee
-    // ─────────────────────────────────────────────
-    private Employee getEmployeeFromSession(UserDetails userDetails) {
-        return employeeRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new LeaveException("找不到該使用者"));
-    }
+
 }

@@ -4,15 +4,12 @@ import com.sm.leave.dto.request.LeaveApplyRequest;
 import com.sm.leave.dto.request.LeaveApprovalRequest;
 import com.sm.leave.dto.response.*;
 import com.sm.leave.entity.Employee;
-import com.sm.leave.exception.LeaveException;
-import com.sm.leave.repository.EmployeeRepository;
 import com.sm.leave.service.LeaveRequestService;
+import com.sm.leave.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,7 +20,7 @@ import java.util.List;
 public class LeaveController {
 
     private final LeaveRequestService leaveRequestService;
-    private final EmployeeRepository  employeeRepository;
+    private final SecurityUtils       securityUtils;
 
     /**
      * 申請請假
@@ -33,11 +30,9 @@ public class LeaveController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/apply")
     public ResponseEntity<ApiResponse<LeaveApplyResponse>> leaveApply(
-            @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody LeaveApplyRequest request) {
-
-        getEmployeeFromSession(userDetails);
-        return ResponseEntity.ok(ApiResponse.success(leaveRequestService.applyLeave(request)));
+        Employee employee = securityUtils.getCurrentEmployee();
+        return ResponseEntity.ok(ApiResponse.success(leaveRequestService.applyLeave(request, employee.getEmployeeNo())));
     }
 
     /**
@@ -47,10 +42,9 @@ public class LeaveController {
     @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     @PostMapping("/approval")
     public ResponseEntity<ApiResponse<LeaveApprovalResponse>> leaveApproval(
-            @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody LeaveApprovalRequest request) {
 
-        Employee manager = getEmployeeFromSession(userDetails);
+        Employee manager = securityUtils.getCurrentEmployee();
         return ResponseEntity.ok(ApiResponse.success(leaveRequestService.approveLeave(request, manager.getId())));
     }
 
@@ -61,10 +55,9 @@ public class LeaveController {
     @PatchMapping("/cancel/{leaveRequestId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<LeaveCancelResponse>> cancelLeave(
-            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long leaveRequestId) {
 
-        Employee employee = getEmployeeFromSession(userDetails);
+        Employee employee = securityUtils.getCurrentEmployee();
         return ResponseEntity.ok(ApiResponse.success(
                 leaveRequestService.cancelLeave(leaveRequestId, employee.getEmployeeNo())));
     }
@@ -75,10 +68,9 @@ public class LeaveController {
      */
     @GetMapping("/my-history")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<List<LeaveHistoryResponse>>> getMyLeaveHistory(
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<ApiResponse<List<LeaveHistoryResponse>>> getMyLeaveHistory() {
 
-        Employee employee = getEmployeeFromSession(userDetails);
+        Employee employee = securityUtils.getCurrentEmployee();
         return ResponseEntity.ok(ApiResponse.success(
                 leaveRequestService.getMyLeaveHistory(employee.getEmployeeNo())));
     }
@@ -89,19 +81,11 @@ public class LeaveController {
      */
     @GetMapping("/pending")
     @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
-    public ResponseEntity<ApiResponse<List<PendingLeaveResponse>>> getPendingLeaves(
-            @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<ApiResponse<List<PendingLeaveResponse>>> getPendingLeaves() {
 
-        Employee manager = getEmployeeFromSession(userDetails);
+        Employee manager = securityUtils.getCurrentEmployee();
         return ResponseEntity.ok(ApiResponse.success(
                 leaveRequestService.getPendingLeaves(manager.getId())));
     }
 
-    // ─────────────────────────────────────────────
-    // 私有工具方法：從 Session 取出當前登入的 Employee
-    // ─────────────────────────────────────────────
-    private Employee getEmployeeFromSession(UserDetails userDetails) {
-        return employeeRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new LeaveException("找不到該使用者"));
-    }
 }

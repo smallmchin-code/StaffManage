@@ -9,7 +9,8 @@ public record CreateEmployeeResponse(Long   id,
                                      String name,
                                      String email,
                                      String status,
-                                     String roleCode ,
+                                     String roleCode,
+                                     String departmentName,
                                      String message) {
 
 

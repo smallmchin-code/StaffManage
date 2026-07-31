@@ -2,35 +2,39 @@ package com.sm.leave.service.impl;
 
 import com.sm.leave.dto.request.CreateEmployeeRequest;
 import com.sm.leave.dto.response.CreateEmployeeResponse;
+import com.sm.leave.dto.response.EmployeeStatusResponse;
+import com.sm.leave.entity.Department;
+import com.sm.leave.entity.LeaveRequest;
 import com.sm.leave.entity.Role;
 import com.sm.leave.exception.LeaveException;
+import com.sm.leave.repository.DepartmentRepository;
 import com.sm.leave.repository.EmployeeRepository;
+import com.sm.leave.repository.LeaveRequestRepository;
 import com.sm.leave.repository.RoleRepository;
 import com.sm.leave.service.EmployeeService;
 import com.sm.leave.entity.Employee;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
+
 @Slf4j
 @Service
-@Transactional(readOnly = true)
+@Transactional
+@RequiredArgsConstructor
 public class EmployeeServiceImpl implements EmployeeService {
 
+    private final DepartmentRepository departmentRepository;
     private final EmployeeRepository employeeRepository;
     private final RoleRepository roleRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
     private final PasswordEncoder passwordEncoder; // 注入 Spring Security 的加密器
 
-    public EmployeeServiceImpl(EmployeeRepository employeeRepository,
-                               RoleRepository roleRepository,
-                               PasswordEncoder passwordEncoder) {
-        this.employeeRepository = employeeRepository;
-        this.roleRepository =  roleRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
 
     @Transactional
     public CreateEmployeeResponse createEmployee(CreateEmployeeRequest request) {
@@ -38,6 +42,9 @@ public class EmployeeServiceImpl implements EmployeeService {
         if (employeeRepository.existsByEmail(request.email())) {
             throw new LeaveException("該 Email 已經被註冊過");
         }
+
+        Department department = departmentRepository.findByName(request.departmentName())
+                .orElseThrow(() -> new LeaveException("該部門不存在"));
 
         Role role = roleRepository.findById(request.roleId())
                 .orElseThrow(() ->
@@ -59,6 +66,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .password(encodedPassword)
                 .status("ACTIVE")       // 預設為在職
                 .role(role) // 預設角色
+                .department(department)
                 .build();
 
         // 5. 存進 DB
@@ -74,7 +82,87 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .email(savedEmployee.getEmail())
                 .status(savedEmployee.getStatus())
                 .roleCode(savedEmployee.getRole().getCode())
+                .departmentName(savedEmployee.getDepartment().getName())
                 .message("員工帳號建立成功")
+                .build();
+    }
+
+    @Transactional
+    public void updatePassword(String email, String oldPassword, String newPassword) {
+        Employee employee = findByEmail(email);
+
+        // 驗證舊密碼是否正確
+        if (!passwordEncoder.matches(oldPassword, employee.getPassword())) {
+            throw new LeaveException("舊密碼輸入錯誤");
+        }
+
+        // 密碼加密並儲存
+        employee.setPassword(passwordEncoder.encode(newPassword));
+        employeeRepository.save(employee);
+    }
+
+    @Transactional
+    public void resetPasswordByAdmin(String email, String tempPassword) {
+        // 管理員強制重設密碼（不需驗證舊密碼）
+        Employee employee = findByEmail(email);
+
+        employee.setPassword(passwordEncoder.encode(tempPassword));
+        employeeRepository.save(employee);
+    }
+
+    @Transactional
+    public EmployeeStatusResponse updateEmployeeStatusToInactive(Long employeeId, Long operatorId, String reason) {
+
+        // 1. 驗證操作者（HR/主管）是否存在與角色
+        Employee operator = employeeRepository.findById(operatorId)
+                .orElseThrow(() -> new LeaveException("找不到操作人員資訊"));
+
+        // 假設只有 HR 或 SYSTEM 級別可以辦理離職
+        if (!"HR".equalsIgnoreCase(operator.getRole().getCode()) && !"ADMIN".equalsIgnoreCase(operator.getRole().getCode())) {
+            throw new LeaveException("權限不足：只有 HR 或系統管理員可以辦理員工離職");
+        }
+
+        // 2. 驗證被操作的員工是否存在
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new LeaveException("找不到該員工，無法辦理離職"));
+
+        // 安全把關：禁止自己幫自己辦離職
+        if (employeeId.equals(operatorId)) {
+            throw new LeaveException("違反安全規範：您無法為自己辦理離職處理");
+        }
+
+        // 3. 檢查是否已經是離職狀態
+        if ("INACTIVE".equalsIgnoreCase(employee.getStatus())) {
+            throw new LeaveException("該員工已經是離職(INACTIVE)狀態，請勿重複操作");
+        }
+
+        // 4. 【核心連動】清理該員工所有 PENDING (審核中) 的假單
+        List<LeaveRequest> pendingLeaves = leaveRequestRepository.findByEmployeeIdAndStatus(employeeId, "PENDING");
+        if (!pendingLeaves.isEmpty()) {
+            log.info("將自動作廢員工(工號: {})的 {} 筆待審核假單", employee.getEmployeeNo(), pendingLeaves.size());
+            for (LeaveRequest lr : pendingLeaves) {
+                lr.setStatus("CANCELLED");
+                // 這裡可以直接加上備註原因
+                lr.setRejectReason("系統自動作廢：員工已辦理離職");
+            }
+            // 批次儲存更新後的假單狀態
+            leaveRequestRepository.saveAll(pendingLeaves);
+        }
+
+        // 5. 變更員工狀態為離職
+        employee.setStatus("INACTIVE");
+        Employee updatedEmployee = employeeRepository.save(employee);
+
+        log.info("員工離職手續辦理成功！操作者: {}, 被離職員工工號: {}, 姓名: {}, 原因: {}",
+                operator.getName(), updatedEmployee.getEmployeeNo(), updatedEmployee.getName(), reason);
+
+        // 6. 包裝 Response DTO 回傳
+        return EmployeeStatusResponse.builder()
+                .employeeId(updatedEmployee.getId())
+                .employeeNo(updatedEmployee.getEmployeeNo())
+                .name(updatedEmployee.getName())
+                .status(updatedEmployee.getStatus()) // 回傳 INACTIVE
+                .message("員工離職手續辦理完成，已自動作廢其所有待審核假單")
                 .build();
     }
 
@@ -99,6 +187,9 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .orElse("EMP00001");
     }// 如果資料庫完全沒資料，就從 EMP00001 開始
 
-
+    private Employee findByEmail(String email) {
+        return employeeRepository.findByEmail(email)
+                .orElseThrow(() -> new LeaveException("找不到工號為 " + email + " 的員工"));
+    }
 
 }

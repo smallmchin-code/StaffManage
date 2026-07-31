@@ -4,11 +4,13 @@ import com.sm.leave.dto.request.CreateEmployeeRequest;
 import com.sm.leave.dto.request.LoginRequest;
 import com.sm.leave.dto.response.ApiResponse;
 import com.sm.leave.dto.response.CreateEmployeeResponse;
+import com.sm.leave.dto.response.EmployeeStatusResponse;
 import com.sm.leave.dto.response.LoginResponse;
 import com.sm.leave.entity.Employee;
 import com.sm.leave.repository.EmployeeRepository;
 import com.sm.leave.service.EmployeeService;
 
+import com.sm.leave.util.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -17,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -38,9 +41,11 @@ public class AuthController {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
-    private final EmployeeRepository employeeRepository;
-    private final EmployeeService employeeService;
+    private final EmployeeRepository    employeeRepository;
+    private final EmployeeService       employeeService;
     private final AuthenticationManager authenticationManager;
+    private final SecurityUtils         securityUtils;
+
 
     private final SecurityContextRepository securityContextRepository =
             new HttpSessionSecurityContextRepository();
@@ -93,19 +98,48 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<LoginResponse> me(@AuthenticationPrincipal UserDetails userDetails){
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<LoginResponse>> me(){
+        Employee user = securityUtils.getCurrentEmployee();
 
-        Employee user = employeeRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new IllegalStateException("使用者資料不存在"));
+        LoginResponse loginResponse = LoginResponse.builder()
+                .name(user.getName())
+                .roleCode(user.getRole().getCode())
+                .employeeNo(user.getEmployeeNo())
+                .build();
 
+        return ResponseEntity.ok(ApiResponse.success(loginResponse));
+    }
 
-        return ResponseEntity.ok(
-                LoginResponse.builder()
-                        .name(user.getName())
-                        .roleCode(user.getRole().getCode())
-                        .employeeNo(user.getEmployeeNo())
-                        .build()
-        );
+    @PostMapping("/updatePassword")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<?>> updatePassword(@Valid String newPassword){
+        Employee employee = securityUtils.getCurrentEmployee();
+
+        employeeService.updatePassword(employee.getEmail(),
+                                       employee.getPassword(),
+                                       newPassword);
+        return ResponseEntity.ok(ApiResponse.success("密碼更改成功"));
+    }
+
+    @PostMapping("/admin/updatePassword")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    public ResponseEntity<ApiResponse<?>> resetPasswordByAdmin(@Valid String newPassword){
+        Employee employee = securityUtils.getCurrentEmployee();
+
+        employeeService.resetPasswordByAdmin(employee.getEmail(),
+                                                newPassword);
+        return ResponseEntity.ok(ApiResponse.success("密碼更改成功"));
+    }
+
+    @PostMapping("/resignation")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<EmployeeStatusResponse>> resignation (@Valid Long employeeId, @Valid String reason){
+        Employee operator = securityUtils.getCurrentEmployee();
+
+        EmployeeStatusResponse response = employeeService.updateEmployeeStatusToInactive(employeeId, operator.getId(), reason);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+
     }
 }
