@@ -133,7 +133,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
                 .orElseThrow(() -> new LeaveException("找不到該筆請假申請"));
 
         // 4. 驗證安全性：這個主管是否有權限審核這名員工？ (進階商務邏輯，可依需求加入)
-         if (!leaveRequest.getEmployee().getManager().equals(manager)) {
+        if (!leaveRequest.getEmployee().getManager().getId().equals(managerId)) {
              throw new LeaveException("您不是該員工的直屬主管，無法審核此假單");
          }
 
@@ -259,6 +259,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
                 .toList();
     }
 
+    @Override
     @Transactional(readOnly = true) // 唯讀查詢優化
     public List<PendingLeaveResponse> getPendingLeaves(Long managerId) {
 

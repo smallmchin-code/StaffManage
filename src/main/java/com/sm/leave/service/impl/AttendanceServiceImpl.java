@@ -39,6 +39,9 @@ public class AttendanceServiceImpl implements AttendanceService {
     @Value("${company.work-start-time:09:00}")
     private String workStartTimeStr;
 
+    @Value("${company.work-end-time:18:00}")
+    private String workEndTimeStr;
+
     /**
      * 上班打卡
      */
@@ -136,6 +139,26 @@ public class AttendanceServiceImpl implements AttendanceService {
         BigDecimal workHours = BigDecimal.valueOf(totalMinutes)
                 .divide(BigDecimal.valueOf(60), 1, RoundingMode.HALF_UP); // 保留一位小數
 
+
+        // ── 早退判斷 ──────────────────────────────────────
+        // 從設定檔讀取下班時間，預設 18:00
+        LocalTime standardEndTime = LocalTime.parse(workEndTimeStr);
+        LocalTime checkOutTime    = now.toLocalTime();
+
+        // 打卡時間早於標準下班時間 → 早退
+        // 注意：若原本就是 LATE（遲到），早退狀態蓋掉遲到，實際上兩者可能同時成立
+        // 依公司規章決定，這裡的做法是：早退優先標記，遲到已在上班打卡時記錄
+        String updatedStatus = attendance.getStatus();
+        if (checkOutTime.isBefore(standardEndTime)) {
+            updatedStatus = "EARLY_LEAVE";
+            log.info("員工(ID:{}) 早退，打卡時間: {}，標準下班時間: {}", employeeId, checkOutTime, standardEndTime);
+        }
+
+        // ── 更新紀錄 ──────────────────────────────────────
+        attendance.setCheckOutTime(now);
+        attendance.setWorkHours(workHours);
+        attendance.setStatus(updatedStatus);
+
         // 4. 更新紀錄
         attendance.setCheckOutTime(now);
         attendance.setWorkHours(workHours);
@@ -144,13 +167,18 @@ public class AttendanceServiceImpl implements AttendanceService {
 
         AttendanceRecord savedAttendance = attendanceRecordRepository.save(attendance);
 
+        String message = "EARLY_LEAVE".equals(updatedStatus)
+                ? String.format("下班打卡成功！提醒您今日早退，總工時 %s 小時。", workHours)
+                : String.format("下班打卡成功！您今日總工時為 %s 小時。辛苦了！", workHours);
+
         // 5. 回傳 Response DTO
         return AttendanceResponse.builder()
                 .attendanceId(savedAttendance.getId())
                 .checkInTime(savedAttendance.getCheckInTime())
                 .checkOutTime(savedAttendance.getCheckOutTime())
                 .workHours(savedAttendance.getWorkHours())
-                .message(String.format("下班打卡成功！您今日總工時為 %s 小時。辛苦了！", workHours))
+                .status(savedAttendance.getStatus())
+                .message(message)
                 .build();
     }
 

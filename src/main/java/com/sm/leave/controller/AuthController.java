@@ -17,7 +17,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -111,35 +110,5 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(loginResponse));
     }
 
-    @PostMapping("/updatePassword")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<?>> updatePassword(@Valid String newPassword){
-        Employee employee = securityUtils.getCurrentEmployee();
 
-        employeeService.updatePassword(employee.getEmail(),
-                                       employee.getPassword(),
-                                       newPassword);
-        return ResponseEntity.ok(ApiResponse.success("密碼更改成功"));
-    }
-
-    @PostMapping("/admin/updatePassword")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
-    public ResponseEntity<ApiResponse<?>> resetPasswordByAdmin(@Valid String newPassword){
-        Employee employee = securityUtils.getCurrentEmployee();
-
-        employeeService.resetPasswordByAdmin(employee.getEmail(),
-                                                newPassword);
-        return ResponseEntity.ok(ApiResponse.success("密碼更改成功"));
-    }
-
-    @PostMapping("/resignation")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<EmployeeStatusResponse>> resignation (@Valid Long employeeId, @Valid String reason){
-        Employee operator = securityUtils.getCurrentEmployee();
-
-        EmployeeStatusResponse response = employeeService.updateEmployeeStatusToInactive(employeeId, operator.getId(), reason);
-
-        return ResponseEntity.ok(ApiResponse.success(response));
-
-    }
 }

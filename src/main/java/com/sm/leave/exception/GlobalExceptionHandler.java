@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleExamException(
             LeaveException e, HttpServletRequest request) {
 
-        logger.warn("考試操作失敗，請求路徑: {}, 錯誤訊息: {}", request.getRequestURI(), e.getMessage());
+        logger.warn("請假系統操作失敗，請求路徑: {}, 錯誤訊息: {}" , request.getRequestURI(), e.getMessage());
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(e.getMessage(), "EXAM_OPERATION_FAILED"));

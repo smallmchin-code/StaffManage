@@ -19,7 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/attendance")
 @RequiredArgsConstructor
-public class AttendanceController {
+public class  AttendanceController {
 
     private final AttendanceService   attendanceService;
     private final SecurityUtils       securityUtils;

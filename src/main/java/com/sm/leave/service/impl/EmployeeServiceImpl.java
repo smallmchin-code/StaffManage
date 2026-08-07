@@ -25,8 +25,8 @@ import java.util.List;
 
 @Slf4j
 @Service
-@Transactional
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class EmployeeServiceImpl implements EmployeeService {
 
     private final DepartmentRepository departmentRepository;
@@ -117,9 +117,9 @@ public class EmployeeServiceImpl implements EmployeeService {
         Employee operator = employeeRepository.findById(operatorId)
                 .orElseThrow(() -> new LeaveException("找不到操作人員資訊"));
 
-        // 假設只有 HR 或 SYSTEM 級別可以辦理離職
-        if (!"HR".equalsIgnoreCase(operator.getRole().getCode()) && !"ADMIN".equalsIgnoreCase(operator.getRole().getCode())) {
-            throw new LeaveException("權限不足：只有 HR 或系統管理員可以辦理員工離職");
+        // 假設只有  SYSTEM 級別可以辦理離職
+        if (!"ADMIN".equalsIgnoreCase(operator.getRole().getCode())) {
+            throw new LeaveException("權限不足：只有系統管理員可以辦理員工離職");
         }
 
         // 2. 驗證被操作的員工是否存在
