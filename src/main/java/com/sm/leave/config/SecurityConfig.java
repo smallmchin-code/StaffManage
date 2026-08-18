@@ -60,6 +60,8 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
 
+                        .requestMatchers("/", "/index.html", "/static/**", "/*.js", "/*.css", "/*.ico", "/assets/**").permitAll()
+                        .requestMatchers("/register", "/login").permitAll()
                         // ── 公開端點（不需登入）──
                         .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
 
@@ -71,9 +73,24 @@ public class SecurityConfig {
 
                         // ── 所有登入過的人都可以（ADMIN、MANAGER、EMPLOYEE 三種角色）──
                         // hasAnyRole("ADMIN","MANAGER","EMPLOYEE") 等同於 authenticated()，
-                        .requestMatchers("/api/leave/**", "/api/attendance/**").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
-                        .requestMatchers("/api/auth/me", "/api/auth/updatePassword", "/api/auth/resignation").hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
-                        .requestMatchers("/api/auth/admin/**").hasRole("ADMIN")
+                        .requestMatchers(
+                                "/api/auth/me",
+                                "/api/auth/logout",
+                                "/api/auth/updatePassword",
+                                "/api/auth/resignation"
+                        ).hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+
+                        .requestMatchers(
+                                "/api/leave/**"
+                        ).hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+
+                        .requestMatchers(
+                                "/api/attendance/**"
+                        ).hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+
+                        .requestMatchers(
+                                "/api/notifications/**"
+                        ).hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
 
                         // ── 其餘全部擋掉 ──
                         .anyRequest().denyAll()

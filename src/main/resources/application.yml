@@ -22,7 +22,7 @@ spring:
       resolve-lazily: false
   datasource:
     # 預設改連 master，確保連線能成功建立並順利產生資料表
-    url: JDBC:sqlserver://mssql-db:1433;databaseName=master;trustServerCertificate=true
+    url: jdbc:sqlserver://localhost:1433;databaseName=master;trustServerCertificate=true
     username: sa
     password: 1qaz@WSX  # 修正：明確填入密碼，不能留空
 
@@ -35,3 +35,7 @@ server:
       enabled: true
   tomcat:
     uri-encoding: UTF-8
+
+company:
+  work-start-time: 09:00
+  work-end-time: 18:00

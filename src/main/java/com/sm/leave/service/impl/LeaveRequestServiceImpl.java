@@ -1,5 +1,6 @@
 package com.sm.leave.service.impl;
 
+import com.sm.leave.service.NotificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,15 +33,18 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     private final LeaveRequestRepository    leaveRequestRepository;
     private final LeaveTypeRepository       leaveTypeRepository;
     private final ApprovalHistoryRepository approvalHistoryRepository;
+    private final NotificationService       notificationService;
 
-    public LeaveRequestServiceImpl(EmployeeRepository employeeRepository,
-                                   LeaveRequestRepository leaveRequestRepository,
-                                   LeaveTypeRepository leaveTypeRepository,
-                                   ApprovalHistoryRepository approvalHistoryRepository) {
+    public LeaveRequestServiceImpl(EmployeeRepository        employeeRepository,
+                                   LeaveRequestRepository    leaveRequestRepository,
+                                   LeaveTypeRepository       leaveTypeRepository,
+                                   ApprovalHistoryRepository approvalHistoryRepository,
+                                   NotificationService       notificationService) {
         this.employeeRepository         = employeeRepository;
         this.leaveRequestRepository     = leaveRequestRepository;
         this.leaveTypeRepository        = leaveTypeRepository;
         this.approvalHistoryRepository  = approvalHistoryRepository;
+        this.notificationService        = notificationService;
     }
 
     /**
@@ -101,7 +105,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         LeaveRequest savedRequest = leaveRequestRepository.save(leaveRequest);
 
         // 9. 建立通知、通知主管
-        sendNotificationToManager(employee, savedRequest);
+        notificationService.sendLeaveApplyNotificationToManager(employee, savedRequest);
 
         return new LeaveApplyResponse(startDate,
                 endDate,
@@ -176,7 +180,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         approvalHistoryRepository.save(history);
 
         // 8. 發送通知給員工
-        sendNotificationToEmployee(updatedRequest.getEmployee(), updatedRequest);
+        notificationService.sendLeaveResultNotificationToEmployee(updatedRequest.getEmployee(), updatedRequest);
 
         return LeaveApprovalResponse.builder()
                 .leaveRequestId(updatedRequest.getId())
@@ -322,16 +326,6 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     private Employee findByEmployeeNo(String employeeNo) {
         return employeeRepository.findByEmployeeNo(employeeNo)
                 .orElseThrow(() -> new LeaveException("找不到工號為 " + employeeNo + " 的員工"));
-    }
-
-    private void sendNotificationToManager(Employee employee, LeaveRequest request) {
-        // 實作你的通知邏輯，例如發送 Email 或系統推播
-        log.info("已發送請假通知給員工 {} 的直屬主管。假單ID: {}", employee.getName(), request.getId());
-    }
-
-    private void sendNotificationToEmployee(Employee employee, LeaveRequest request) {
-        // 實作你的通知邏輯，例如發送 Email 或系統推播
-        log.info("已發送審核結果通知給員工 {}。假單ID: {}", employee.getName(), request.getId());
     }
 
 }

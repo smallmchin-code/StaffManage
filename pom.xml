@@ -64,21 +64,21 @@
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
 		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-security-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc-test</artifactId>
-			<scope>test</scope>
-		</dependency>
+<!--		<dependency>-->
+<!--			<groupId>org.springframework.boot</groupId>-->
+<!--			<artifactId>spring-boot-starter-data-jpa-test</artifactId>-->
+<!--			<scope>test</scope>-->
+<!--		</dependency>-->
+<!--		<dependency>-->
+<!--			<groupId>org.springframework.boot</groupId>-->
+<!--			<artifactId>spring-boot-starter-security-test</artifactId>-->
+<!--			<scope>test</scope>-->
+<!--		</dependency>-->
+<!--		<dependency>-->
+<!--			<groupId>org.springframework.boot</groupId>-->
+<!--			<artifactId>spring-boot-starter-webmvc-test</artifactId>-->
+<!--			<scope>test</scope>-->
+<!--		</dependency>-->
 
 		<dependency>
 			<groupId>org.springframework.security</groupId>
@@ -119,21 +119,21 @@
 							</annotationProcessorPaths>
 						</configuration>
 					</execution>
-					<execution>
-						<id>default-testCompile</id>
-						<phase>test-compile</phase>
-						<goals>
-							<goal>testCompile</goal>
-						</goals>
-						<configuration>
-							<annotationProcessorPaths>
-								<path>
-									<groupId>org.projectlombok</groupId>
-									<artifactId>lombok</artifactId>
-								</path>
-							</annotationProcessorPaths>
-						</configuration>
-					</execution>
+<!--					<execution>-->
+<!--						<id>default-testCompile</id>-->
+<!--						<phase>test-compile</phase>-->
+<!--						<goals>-->
+<!--							<goal>testCompile</goal>-->
+<!--						</goals>-->
+<!--						<configuration>-->
+<!--							<annotationProcessorPaths>-->
+<!--								<path>-->
+<!--									<groupId>org.projectlombok</groupId>-->
+<!--									<artifactId>lombok</artifactId>-->
+<!--								</path>-->
+<!--							</annotationProcessorPaths>-->
+<!--						</configuration>-->
+<!--					</execution>-->
 				</executions>
 			</plugin>
 		</plugins>
