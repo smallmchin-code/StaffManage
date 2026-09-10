@@ -12,7 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Objects;
 
 @Component
-public class SecurityUtils {
+public class  SecurityUtils {
 
     private final EmployeeRepository employeeRepository;
 

@@ -43,7 +43,7 @@ public class SecurityConfig {
     }
 
     // ─────────────────────────────────────────────
-    // 3. AuthenticationManager（Controller 的 login 方法需要注入這個）
+    // 3. AuthenticationManager
     // ─────────────────────────────────────────────
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {

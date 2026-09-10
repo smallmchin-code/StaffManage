@@ -74,7 +74,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         log.info("成功建立新員工！工號: {}, 姓名: {}", nextEmployeeNo, savedEmployee.getName());
 
-        // 6. 回傳 Response DTO (千萬不要把加密後的密碼回傳給前端！)
+        // 6. 回傳 Response DTO
         return CreateEmployeeResponse.builder()
                 .id(savedEmployee.getId())
                 .employeeNo(savedEmployee.getEmployeeNo())
@@ -117,7 +117,6 @@ public class EmployeeServiceImpl implements EmployeeService {
         Employee operator = employeeRepository.findById(operatorId)
                 .orElseThrow(() -> new LeaveException("找不到操作人員資訊"));
 
-        // 假設只有  SYSTEM 級別可以辦理離職
         if (!"ADMIN".equalsIgnoreCase(operator.getRole().getCode())) {
             throw new LeaveException("權限不足：只有系統管理員可以辦理員工離職");
         }

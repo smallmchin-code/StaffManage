@@ -23,7 +23,7 @@ public class LeaveException extends RuntimeException {
 
     /**
      * 建構子
-     * 
+     *
      * @param message 例外訊息
      */
     public LeaveException(String message) {
