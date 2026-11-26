@@ -2,7 +2,6 @@ package com.sm.leave.config;
 
 import com.sm.leave.security.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,10 +14,15 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity          // 啟用 @PreAuthorize 等 Method 層級的權限控管
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -33,7 +37,7 @@ public class SecurityConfig {
     }
 
     // ─────────────────────────────────────────────
-    // 2. 告訴 Spring Security 用哪個 UserDetailsService + 哪個加密器
+    // 2. UserDetailsService + 加密器
     // ─────────────────────────────────────────────
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
@@ -51,28 +55,81 @@ public class SecurityConfig {
     }
 
     // ─────────────────────────────────────────────
-    // 4. URL 層級的權限規則
+    // 4. CORS 設定必須在 Security 層處理
+    //    原本放在 WebConfig.addCorsMappings 的設定
+    //    在 Security filter 之前就被擋掉，這裡才是正確位置
+    // ─────────────────────────────────────────────
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of(
+                "http://localhost:4200",
+                "http://172.20.10.4:5173"
+        ));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true); // Session Cookie 需要這個
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
+    // ─────────────────────────────────────────────
+    // 5. URL 層級的權限規則
+    //
+    // 優先順序：由上到下，第一個匹配的規則生效
     // ─────────────────────────────────────────────
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)   // REST API 不需要 CSRF（若有前端 form 提交請斟酌）
+                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // 使用上方的 CORS Bean
+                .csrf(AbstractHttpConfigurer::disable)
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
 
-                        .requestMatchers("/", "/index.html", "/static/**", "/*.js", "/*.css", "/*.ico", "/assets/**").permitAll()
-                        .requestMatchers("/register", "/login").permitAll()
-                        // ── 公開端點（不需登入）──
-                        .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                        // ════════════════════════════════
+                        // 前端靜態資源與 SPA 路由（無須登入）
+                        // ════════════════════════════════
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/register",
+                                "/login",
+                                "/assets/**",
+                                "/static/**",
+                                "/*.js",
+                                "/*.css",
+                                "/*.ico"
+                        ).permitAll()
 
-                        // ── 只有 ADMIN 可以進來 ──
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // ════════════════════════════════
+                        // 公開 API 端點（無須登入）
+                        // ════════════════════════════════
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/register"
+                        ).permitAll()
 
-                        // ── ADMIN 或 MANAGER 可以進來（例如審核假單）──
-                        .requestMatchers("/api/leave/pending", "/api/leave/approval").hasAnyRole("ADMIN", "MANAGER")
+                        // ════════════════════════════════
+                        // ADMIN 限定
+                        // ════════════════════════════════
+                        .requestMatchers(
+                                "/api/admin/**",
+                                "/api/auth/admin/**"
+                        ).hasRole("ADMIN")
 
-                        // ── 所有登入過的人都可以（ADMIN、MANAGER、EMPLOYEE 三種角色）──
-                        // hasAnyRole("ADMIN","MANAGER","EMPLOYEE") 等同於 authenticated()，
+                        // ════════════════════════════════
+                        // ADMIN 或 MANAGER 限定
+                        // ════════════════════════════════
+//                        .requestMatchers(
+//                                "/api/leave/approval",
+//                                "/api/leave/pending"
+//                        ).hasAnyRole("ADMIN", "MANAGER")
+
+                        // ════════════════════════════════
+                        // 所有已登入角色（ADMIN / MANAGER / EMPLOYEE）
+                        // ════════════════════════════════
                         .requestMatchers(
                                 "/api/auth/me",
                                 "/api/auth/logout",
@@ -80,24 +137,22 @@ public class SecurityConfig {
                                 "/api/auth/resignation"
                         ).hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
 
-                        .requestMatchers(
-                                "/api/leave/**"
-                        ).hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+                        .requestMatchers("/api/leave/**")
+                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
 
-                        .requestMatchers(
-                                "/api/attendance/**"
-                        ).hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+                        .requestMatchers("/api/attendance/**")
+                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
 
-                        .requestMatchers(
-                                "/api/notifications/**"
-                        ).hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
+                        .requestMatchers("/api/notifications/**")
+                        .hasAnyRole("ADMIN", "MANAGER", "EMPLOYEE")
 
-                        // ── 其餘全部擋掉 ──
+                        // ════════════════════════════════
+                        // 其餘全部擋掉
+                        // ════════════════════════════════
                         .anyRequest().denyAll()
                 )
                 .sessionManagement(session -> session
-                        // Session 由 Spring Security 管理（AuthController 的 login 會存 Session）
-                        .maximumSessions(1)   // 同一帳號最多一個 Session（可依需求移除）
+                        .maximumSessions(1)
                 );
 
         return http.build();

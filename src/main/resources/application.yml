@@ -38,4 +38,4 @@ server:
 
 company:
   work-start-time: 09:00
-  work-end-time: 18:00
+  work-end-time: "18:00"

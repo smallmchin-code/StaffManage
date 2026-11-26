@@ -30,9 +30,13 @@ public class EmployeeController {
     public ResponseEntity<ApiResponse<?>> updatePassword(@Valid @RequestBody UpdatePasswordRequest request){
         Employee employee = securityUtils.getCurrentEmployee();
 
+        logger.info("POST /api/employee/updatePassword 開始 - Email: {}", employee.getEmail());
+
         employeeService.updatePassword(employee.getEmail(),
                 request.oldPassword(),
                 request.newPassword());
+
+        logger.info("POST /api/employee/updatePassword 完成 - Email: {}", employee.getEmail());
         return ResponseEntity.ok(ApiResponse.success("密碼更改成功"));
     }
 
@@ -41,8 +45,12 @@ public class EmployeeController {
     public ResponseEntity<ApiResponse<?>> resetPasswordByAdmin(@RequestParam String newPassword){
         Employee employee = securityUtils.getCurrentEmployee();
 
+        logger.info("POST /api/employee/admin/updatePassword 開始 - 操作者 Email: {}", employee.getEmail());
+
         employeeService.resetPasswordByAdmin(employee.getEmail(),
                 newPassword);
+
+        logger.info("POST /api/employee/admin/updatePassword 完成 - 操作者 Email: {}", employee.getEmail());
         return ResponseEntity.ok(ApiResponse.success("密碼更改成功"));
     }
 
@@ -51,9 +59,11 @@ public class EmployeeController {
     public ResponseEntity<ApiResponse<EmployeeStatusResponse>> resignation (@Valid @RequestBody ResignationRequest request){
         Employee operator = securityUtils.getCurrentEmployee();
 
+        logger.info("POST /api/employee/resignation 開始 - 操作者 ID: {}, 目標員工 ID: {}", operator.getId(), request.employeeId());
+
         EmployeeStatusResponse response = employeeService.updateEmployeeStatusToInactive(request.employeeId(), operator.getId(), request.reason());
 
+        logger.info("POST /api/employee/resignation 完成 - 目標員工 ID: {}", request.employeeId());
         return ResponseEntity.ok(ApiResponse.success(response));
-
     }
 }

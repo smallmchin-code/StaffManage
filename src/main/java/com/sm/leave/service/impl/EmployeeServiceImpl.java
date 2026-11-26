@@ -56,7 +56,8 @@ public class EmployeeServiceImpl implements EmployeeService {
         // 3. 密碼加密
         String encodedPassword = passwordEncoder.encode(request.password());
 
-
+        Employee manager = employeeRepository.findByEmployeeNo(request.managerEmployeeNo())
+                .orElseThrow(() -> new LeaveException("該直屬主管不存在"));;
 
         // 4. 建立員工 Entity (設定預設狀態與角色)
         Employee employee = Employee.builder()
@@ -67,6 +68,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .status("ACTIVE")       // 預設為在職
                 .role(role) // 預設角色
                 .department(department)
+                .manager(manager)
                 .build();
 
         // 5. 存進 DB

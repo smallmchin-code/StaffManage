@@ -83,7 +83,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         }
 
         // 5. 計算請假天數 (轉為 BigDecimal 符合 Entity 設計)
-        long daysBetween = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+        long daysBetween = calculateLeaveDays(startDate, endDate);
         BigDecimal totalDays = BigDecimal.valueOf(daysBetween);
 
         // 6. 撈取假別 (假設 request 有帶 leaveTypeId)
@@ -326,6 +326,28 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     private Employee findByEmployeeNo(String employeeNo) {
         return employeeRepository.findByEmployeeNo(employeeNo)
                 .orElseThrow(() -> new LeaveException("找不到工號為 " + employeeNo + " 的員工"));
+    }
+
+    private long calculateLeaveDays(LocalDate startDate, LocalDate endDate) {
+
+        long totalDays = 0;
+
+        LocalDate currentDate = startDate;
+
+        while (!currentDate.isAfter(endDate)) {
+
+            DayOfWeek dayOfWeek = currentDate.getDayOfWeek();
+
+            if (dayOfWeek != DayOfWeek.SATURDAY
+                    && dayOfWeek != DayOfWeek.SUNDAY) {
+
+                totalDays++;
+            }
+
+            currentDate = currentDate.plusDays(1);
+        }
+
+        return totalDays;
     }
 
 }

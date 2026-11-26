@@ -46,7 +46,7 @@ public class LeaveRequest {
     @Column(name = "total_days", nullable = false, precision = 5, scale = 1)
     private BigDecimal totalDays;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String reason;
 
     /** PENDING / APPROVED / REJECTED / CANCELLED */
@@ -63,7 +63,7 @@ public class LeaveRequest {
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
 
-    @Column(name = "reject_reason", columnDefinition = "TEXT")
+    @Column(name = "reject_reason", columnDefinition = "NVARCHAR(255)")
     private String rejectReason;
 
     @OneToMany(mappedBy = "leaveRequest", fetch = FetchType.LAZY, cascade = CascadeType.ALL)

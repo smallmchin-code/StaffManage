@@ -30,7 +30,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public List<NotificationResponse> getNotifications(Long employeeId) {
-        log.debug("查詢員工(ID:{}) 的通知列表，最多回傳 {} 筆", employeeId, MAX_NOTIFICATION_SIZE);
+        log.info("查詢員工(ID:{}) 的通知列表，最多回傳 {} 筆", employeeId, MAX_NOTIFICATION_SIZE);
 
         List<NotificationResponse> result = notificationRepository
                 .findByEmployeeIdOrderByCreatedAtDesc(
@@ -39,14 +39,14 @@ public class NotificationServiceImpl implements NotificationService {
                 .map(this::toDto)
                 .toList();
 
-        log.debug("員工(ID:{}) 共查詢到 {} 筆通知", employeeId, result.size());
+        log.info("員工(ID:{}) 共查詢到 {} 筆通知", employeeId, result.size());
         return result;
     }
 
     @Override
     public long getUnreadCount(Long employeeId) {
         long count = notificationRepository.countByEmployeeIdAndIsReadFalse(employeeId);
-        log.debug("員工(ID:{}) 未讀通知數量：{}", employeeId, count);
+        log.info("員工(ID:{}) 未讀通知數量：{}", employeeId, count);
         return count;
     }
 
@@ -55,7 +55,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public void markAsRead(Long notificationId, Long employeeId) {
-        log.debug("員工(ID:{}) 嘗試標記通知(ID:{}) 為已讀", employeeId, notificationId);
+        log.info("員工(ID:{}) 嘗試標記通知(ID:{}) 為已讀", employeeId, notificationId);
 
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new LeaveException("找不到該通知"));
@@ -73,7 +73,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public void markAllAsRead(Long employeeId) {
-        log.debug("員工(ID:{}) 請求一鍵全部已讀", employeeId);
+        log.info("員工(ID:{}) 請求一鍵全部已讀", employeeId);
 
         // 批次 UPDATE，不需先 SELECT 再逐筆 save
         notificationRepository.markAllAsReadByEmployeeId(employeeId);
@@ -86,7 +86,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public void sendLeaveApplyNotificationToManager(Employee employee, LeaveRequest leaveRequest) {
-        log.debug("準備發送請假通知，申請員工：{}，假單ID：{}", employee.getEmployeeNo(), leaveRequest.getId());
+        log.info("準備發送請假通知，申請員工：{}，假單ID：{}", employee.getEmployeeNo(), leaveRequest.getId());
 
         Employee manager = employee.getManager();
         if (manager == null) {
@@ -97,7 +97,7 @@ public class NotificationServiceImpl implements NotificationService {
 
         Notification notification = Notification.builder()
                 .employee(manager)
-                .title("新的請假申請待審核")
+                .title(String.format("新的請假申請待審核"))
                 .content(String.format("員工 %s 申請了 %s（%s ~ %s，共 %s 天），請盡速審核。",
                         employee.getName(),
                         leaveRequest.getLeaveType().getName(),
@@ -116,7 +116,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void sendLeaveResultNotificationToEmployee(Employee employee, LeaveRequest leaveRequest) {
         boolean approved = "APPROVED".equalsIgnoreCase(leaveRequest.getStatus());
-        log.debug("準備發送審核結果通知，員工：{}，假單ID：{}，結果：{}",
+        log.info("準備發送審核結果通知，員工：{}，假單ID：{}，結果：{}",
                 employee.getEmployeeNo(), leaveRequest.getId(), leaveRequest.getStatus());
 
         String title   = approved ? "您的請假申請已核准" : "您的請假申請已駁回";

@@ -1,0 +1,11 @@
+# ===================================================================
+# Spring Boot 通用配置 (所有環境共用)
+# ===================================================================
+spring:
+  profiles:
+    active: prod
+  datasource:
+    # 預設改連 master，確保連線能成功建立並順利產生資料表
+    url: jdbc:sqlserver://mssql-db:1433;databaseName=master;trustServerCertificate=true
+    username: sa
+    password: 1qaz@WSX  # 修正：明確填入密碼，不能留空

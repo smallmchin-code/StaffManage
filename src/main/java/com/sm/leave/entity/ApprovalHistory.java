@@ -30,7 +30,7 @@ public class ApprovalHistory {
     @Column(nullable = false, length = 20)
     private String action;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String comment;
 
     @Column(name = "action_time")

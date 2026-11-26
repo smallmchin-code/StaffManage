@@ -23,7 +23,7 @@ public class Department {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(length = 255)
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String description;
 
     @Column(name = "created_at", updatable = false)
